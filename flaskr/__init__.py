@@ -1,6 +1,7 @@
 import os
 import click
 from flask import Flask
+from flask_login import LoginManager
 
 def create_app(test_config=None):
     # create and configure the app
@@ -45,4 +46,35 @@ def create_app(test_config=None):
     app.register_blueprint(blog.bp)
     app.add_url_rule('/', endpoint='index')
     
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    
+    @login_manager.user_loader
+    def load_user(user_id):
+        db = get_db()
+        user = db.execute(
+            'SELECT * FROM user WHERE id = ?', (user_id,)
+        ).fetchone()
+        if user:
+            return User(user['id'], user['username'], user['password'])
+        return None
+
     return app
+
+class User:
+    def __init__(self, user_id, username, password):
+        self.id = user_id
+        self.username = username
+        self.password = password
+
+    def is_authenticated(self):
+        return True
+
+    def is_active(self):
+        return True
+
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return str(self.id)
